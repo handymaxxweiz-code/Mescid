@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مسجد — Moschee Übersetzer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --gold-dim: #7a6030;
+    --dark: #0d0f0e;
+    --surface: #131714;
+    --surface2: #1a1f1b;
+    --surface3: #222820;
+    --text: #e8e4d8;
+    --text-dim: #8a8878;
+    --green: #2d6a4f;
+    --green-light: #52b788;
+    --red: #7a2020;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Crimson Pro', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Geometric background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      repeating-linear-gradient(60deg, transparent, transparent 40px, rgba(201,168,76,0.03) 40px, rgba(201,168,76,0.03) 41px),
+      repeating-linear-gradient(-60deg, transparent, transparent 40px, rgba(201,168,76,0.03) 40px, rgba(201,168,76,0.03) 41px),
+      repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(201,168,76,0.02) 40px, rgba(201,168,76,0.02) 41px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 700px;
+    padding: 20px 16px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 28px 0 16px;
+    border-bottom: 1px solid var(--gold-dim);
+    position: relative;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 2px;
+    background: var(--gold);
+  }
+
+  .header .arabic-title {
+    font-family: 'Amiri', serif;
+    font-size: 2rem;
+    color: var(--gold);
+    letter-spacing: 2px;
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .header .subtitle {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    font-weight: 300;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--surface3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 0.85rem;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .status-dot.listening { background: var(--green-light); box-shadow: 0 0 8px var(--green-light); animation: pulse 1.5s infinite; }
+  .status-dot.processing { background: var(--gold); box-shadow: 0 0 8px var(--gold); animation: pulse 0.8s infinite; }
+  .status-dot.error { background: #e05252; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .status-text { color: var(--text-dim); flex: 1; }
+  .status-text span { color: var(--text); }
+
+  /* Big mic button */
+  .mic-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .mic-btn {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 2px solid var(--gold-dim);
+    background: var(--surface);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s;
+    position: relative;
+    outline: none;
+  }
+
+  .mic-btn:hover { border-color: var(--gold); background: var(--surface2); }
+  .mic-btn.active {
+    border-color: var(--green-light);
+    background: var(--surface2);
+    box-shadow: 0 0 0 8px rgba(82,183,136,0.12), 0 0 0 16px rgba(82,183,136,0.06);
+  }
+
+  .mic-btn svg { width: 36px; height: 36px; transition: fill 0.2s; }
+  .mic-btn.active svg { fill: var(--green-light); }
+  .mic-btn:not(.active) svg { fill: var(--text-dim); }
+
+  .mic-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Mode toggle */
+  .mode-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--surface3);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Crimson Pro', serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .mode-btn.active {
+    background: var(--surface2);
+    color: var(--gold);
+    border-bottom: 2px solid var(--gold);
+  }
+
+  /* Translation panels */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--surface3);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--surface3);
+    background: var(--surface2);
+  }
+
+  .panel-label {
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .panel-flag { font-size: 1.1rem; }
+
+  .panel-body {
+    padding: 18px;
+    min-height: 90px;
+    position: relative;
+  }
+
+  .arabic-text {
+    font-family: 'Amiri', serif;
+    font-size: 1.5rem;
+    line-height: 1.9;
+    direction: rtl;
+    text-align: right;
+    color: var(--gold-light);
+  }
+
+  .german-text {
+    font-size: 1.15rem;
+    line-height: 1.7;
+    color: var(--text);
+    font-weight: 300;
+  }
+
+  .placeholder-text {
+    color: var(--text-dim);
+    font-style: italic;
+    font-size: 0.95rem;
+  }
+
+  /* Loading shimmer */
+  .shimmer {
+    background: linear-gradient(90deg, var(--surface2) 25%, var(--surface3) 50%, var(--surface2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.2s infinite;
+    border-radius: 4px;
+    height: 20px;
+    margin-bottom: 10px;
+  }
+
+  .shimmer:last-child { width: 60%; margin-bottom: 0; }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* History */
+  .history-section { display: flex; flex-direction: column; gap: 10px; }
+
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--surface3);
+    border-radius: 8px;
+    padding: 12px 16px;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .history-arabic {
+    font-family: 'Amiri', serif;
+    font-size: 1.1rem;
+    direction: rtl;
+    text-align: right;
+    color: var(--gold-dim);
+    margin-bottom: 6px;
+    border-bottom: 1px solid var(--surface3);
+    padding-bottom: 6px;
+  }
+
+  .history-german {
+    font-size: 0.95rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .history-time {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* Text input section */
+  .text-input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .arabic-input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--surface3);
+    border-radius: 8px;
+    padding: 14px 16px;
+    color: var(--gold-light);
+    font-family: 'Amiri', serif;
+    font-size: 1.3rem;
+    direction: rtl;
+    text-align: right;
+    resize: vertical;
+    min-height: 80px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .arabic-input:focus { border-color: var(--gold-dim); }
+  .arabic-input::placeholder { color: var(--text-dim); font-style: italic; }
+
+  .translate-btn {
+    padding: 12px 24px;
+    background: transparent;
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    color: var(--gold);
+    font-family: 'Crimson Pro', serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: flex-end;
+  }
+
+  .translate-btn:hover { background: var(--surface2); border-color: var(--gold); }
+  .translate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Clear btn */
+  .clear-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 4px;
+    transition: color 0.2s;
+  }
+  .clear-btn:hover { color: var(--text); }
+
+  /* Info box */
+  .info-box {
+    background: var(--surface);
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+    text-align: center;
+  }
+
+  .info-box strong { color: var(--gold); }
+
+  /* Bismillah decoration */
+  .bismillah {
+    text-align: center;
+    font-family: 'Amiri', serif;
+    font-size: 1.4rem;
+    color: var(--gold-dim);
+    padding: 8px 0;
+    letter-spacing: 4px;
+  }
+
+  /* No support warning */
+  .no-support {
+    background: var(--red);
+    border-radius: 8px;
+    padding: 14px;
+    text-align: center;
+    font-size: 0.9rem;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="arabic-title">مترجم المسجد</div>
+    <div class="subtitle">Moschee · Arabisch → Deutsch</div>
+  </div>
+
+  <div class="bismillah">بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيم</div>
+
+  <!-- Mode toggle -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btn-voice" onclick="switchMode('voice')">🎤 Sprache</button>
+    <button class="mode-btn" id="btn-text" onclick="switchMode('text')">✏️ Text</button>
+  </div>
+
+  <!-- No browser support warning -->
+  <div class="no-support" id="no-support">
+    Dein Browser unterstützt keine Spracherkennung. Bitte benutze Chrome oder Edge, oder wechsle zum Text-Modus.
+  </div>
+
+  <!-- VOICE MODE -->
+  <div id="voice-mode">
+    <div class="status-bar">
+      <div class="status-dot" id="status-dot"></div>
+      <div class="status-text" id="status-text"><span>Bereit</span> — Drücke den Mikrofon-Knopf</div>
+    </div>
+
+    <div class="mic-section">
+      <button class="mic-btn" id="mic-btn" onclick="toggleMic()" title="Mikrofon starten/stoppen">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+      </button>
+      <div class="mic-label" id="mic-label">Tippen zum Starten</div>
+    </div>
+
+    <!-- Arabic heard -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Arabisch gehört</span>
+        <span class="panel-flag">🇸🇦</span>
+      </div>
+      <div class="panel-body">
+        <div class="arabic-text" id="arabic-output">
+          <span class="placeholder-text">Arabische Sprache erscheint hier...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- German translation -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Deutsche Übersetzung</span>
+        <span class="panel-flag">🇩🇪</span>
+      </div>
+      <div class="panel-body" id="german-panel">
+        <div class="german-text" id="german-output">
+          <span class="placeholder-text">Übersetzung erscheint hier...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEXT MODE -->
+  <div id="text-mode" style="display:none; flex-direction:column; gap:12px;">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-label">Arabischen Text eingeben</span>
+        <span class="panel-flag">🇸🇦</span>
+      </div>
+      <div class="panel-body">
+        <textarea class="arabic-input" id="text-input" placeholder="اكتب النص العربي هنا..." rows="4"></textarea>
+      </div>
+    </div>
+    <button class="translate-btn" id="translate-text-btn" onclick="translateText()">Übersetzen</button>
+
+    <div class="panel" id="text-result-panel" style="display:none;">
+      <div class="panel-header">
+        <span class="panel-label">Deutsche Übersetzung</span>
+        <span class="panel-flag">🇩🇪</span>
+      </div>
+      <div class="panel-body">
+        <div class="german-text" id="text-german-output"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div id="history-section" style="display:none;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+      <div style="font-size:0.75rem; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim);">Verlauf</div>
+      <button class="clear-btn" onclick="clearHistory()">Löschen</button>
+    </div>
+    <div class="history-section" id="history-list"></div>
+  </div>
+
+  <div class="info-box">
+    <strong>Tipp:</strong> Gehe in die Moschee mit geöffneter App. Halte das Mikrofon in Richtung Imam. Die App erkennt Arabisch und übersetzt automatisch ins Deutsche.
+  </div>
+
+</div>
+
+<script>
+  // ─── State ───────────────────────────────────────────────────────────────────
+  let recognition = null;
+  let isListening = false;
+  let currentArabic = '';
+  let translateTimeout = null;
+  let mode = 'voice';
+  const history = [];
+
+  // ─── Mode switch ─────────────────────────────────────────────────────────────
+  function switchMode(m) {
+    mode = m;
+    document.getElementById('voice-mode').style.display = m === 'voice' ? 'block' : 'none';
+    document.getElementById('text-mode').style.display = m === 'text' ? 'flex' : 'none';
+    document.getElementById('btn-voice').classList.toggle('active', m === 'voice');
+    document.getElementById('btn-text').classList.toggle('active', m === 'text');
+    if (m === 'text' && isListening) stopListening();
+  }
+
+  // ─── Speech Recognition setup ────────────────────────────────────────────────
+  function setupRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      document.getElementById('no-support').style.display = 'block';
+      document.getElementById('mic-btn').disabled = true;
+      return false;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ar-SA';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    recognition.onstart = () => {
+      setStatus('listening', 'Zuhören läuft — Arabisch wird erkannt');
+      document.getElementById('mic-btn').classList.add('active');
+      document.getElementById('mic-label').textContent = 'Tippen zum Stoppen';
+    };
+
+    recognition.onend = () => {
+      if (isListening) {
+        // Restart automatically
+        try { recognition.start(); } catch(e) {}
+      } else {
+        setStatus('idle', 'Bereit — Drücke den Mikrofon-Knopf');
+        document.getElementById('mic-btn').classList.remove('active');
+        document.getElementById('mic-label').textContent = 'Tippen zum Starten';
+      }
+    };
+
+    recognition.onerror = (e) => {
+      if (e.error === 'no-speech') return;
+      setStatus('error', 'Fehler: ' + e.error);
+    };
+
+    recognition.onresult = (event) => {
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) final += t;
+        else interim += t;
+      }
+      if (final) {
+        currentArabic += ' ' + final.trim();
+        showArabic(currentArabic.trim());
+        scheduleTranslation(currentArabic.trim());
+      } else if (interim) {
+        showArabic((currentArabic + ' ' + interim).trim(), true);
+      }
+    };
+
+    return true;
+  }
+
+  // ─── Mic toggle ──────────────────────────────────────────────────────────────
+  function toggleMic() {
+    if (isListening) stopListening();
+    else startListening();
+  }
+
+  function startListening() {
+    if (!recognition && !setupRecognition()) return;
+    isListening = true;
+    currentArabic = '';
+    try { recognition.start(); } catch(e) {}
+  }
+
+  function stopListening() {
+    isListening = false;
+    try { recognition.stop(); } catch(e) {}
+  }
+
+  // ─── UI helpers ──────────────────────────────────────────────────────────────
+  function setStatus(state, text) {
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot' + (state !== 'idle' ? ' ' + state : '');
+    document.getElementById('status-text').innerHTML = `<span>${text}</span>`;
+  }
+
+  function showArabic(text, interim = false) {
+    const el = document.getElementById('arabic-output');
+    el.style.opacity = interim ? '0.7' : '1';
+    el.textContent = text;
+  }
+
+  function showLoading() {
+    const panel = document.getElementById('german-panel');
+    panel.innerHTML = '<div class="shimmer"></div><div class="shimmer" style="width:80%"></div><div class="shimmer"></div>';
+  }
+
+  function showGerman(text) {
+    const panel = document.getElementById('german-panel');
+    panel.innerHTML = `<div class="german-text">${text}</div>`;
+  }
+
+  // ─── Translation via Claude API ──────────────────────────────────────────────
+  function scheduleTranslation(arabicText) {
+    clearTimeout(translateTimeout);
+    translateTimeout = setTimeout(() => doTranslate(arabicText, false), 1800);
+  }
+
+  async function doTranslate(arabicText, addToHistory = true) {
+    if (!arabicText.trim()) return;
+    setStatus('processing', 'Übersetze...');
+    showLoading();
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `Du bist ein spezialisierter Übersetzer für islamische Predigten (Khutba) und Gebete in der Moschee.
+Übersetze den gegebenen arabischen Text ins Deutsche.
+- Behalte den religiösen Ton bei
+- Erkläre islamische Fachbegriffe kurz in Klammern, wenn nötig
+- Antworte NUR mit der deutschen Übersetzung, kein Kommentar, keine Erklärung davor oder danach
+- Wenn der Text unvollständig ist, übersetze trotzdem so gut wie möglich`,
+          messages: [
+            { role: "user", content: `Übersetze diesen arabischen Text ins Deutsche:\n\n${arabicText}` }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const translation = data.content?.map(b => b.text || '').join('') || 'Übersetzung fehlgeschlagen.';
+
+      showGerman(translation);
+      setStatus('listening', isListening ? 'Zuhören läuft — Arabisch wird erkannt' : 'Fertig');
+
+      if (addToHistory && arabicText.trim().length > 5) {
+        addToHistoryList(arabicText.trim(), translation);
+      }
+    } catch (err) {
+      showGerman('<em style="color:var(--text-dim)">Fehler bei der Übersetzung. Bitte Internetverbindung prüfen.</em>');
+      setStatus('error', 'Übersetzungsfehler');
+    }
+  }
+
+  // ─── Text mode translation ────────────────────────────────────────────────────
+  async function translateText() {
+    const input = document.getElementById('text-input').value.trim();
+    if (!input) return;
+
+    const btn = document.getElementById('translate-text-btn');
+    btn.disabled = true;
+    btn.textContent = 'Übersetzt...';
+
+    const resultPanel = document.getElementById('text-result-panel');
+    resultPanel.style.display = 'block';
+    document.getElementById('text-german-output').innerHTML = '<div class="shimmer"></div><div class="shimmer" style="width:70%"></div>';
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          system: `Du bist ein spezialisierter Übersetzer für islamische Texte, Predigten und Gebete.
+Übersetze den gegebenen arabischen Text präzise und respektvoll ins Deutsche.
+Erkläre islamische Fachbegriffe kurz in Klammern wenn nötig.
+Antworte NUR mit der deutschen Übersetzung.`,
+          messages: [
+            { role: "user", content: `Übersetze ins Deutsche:\n\n${input}` }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const translation = data.content?.map(b => b.text || '').join('') || 'Fehler.';
+      document.getElementById('text-german-output').textContent = translation;
+      addToHistoryList(input, translation);
+    } catch(e) {
+      document.getElementById('text-german-output').innerHTML = '<em style="color:var(--text-dim)">Fehler. Bitte prüfe deine Verbindung.</em>';
+    }
+
+    btn.disabled = false;
+    btn.textContent = 'Übersetzen';
+  }
+
+  // ─── History ─────────────────────────────────────────────────────────────────
+  function addToHistoryList(arabic, german) {
+    const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    history.unshift({ arabic, german, time: now });
+    renderHistory();
+  }
+
+  function renderHistory() {
+    const section = document.getElementById('history-section');
+    const list = document.getElementById('history-list');
+    if (history.length === 0) { section.style.display = 'none'; return; }
+    section.style.display = 'block';
+    list.innerHTML = history.slice(0, 6).map(h => `
+      <div class="history-item">
+        <div class="history-arabic">${h.arabic}</div>
+        <div class="history-german">${h.german}</div>
+        <div class="history-time">${h.time}</div>
+      </div>
+    `).join('');
+  }
+
+  function clearHistory() {
+    history.length = 0;
+    renderHistory();
+  }
+
+  // ─── Init ─────────────────────────────────────────────────────────────────────
+  setupRecognition();
+</script>
+</body>
+</html>
